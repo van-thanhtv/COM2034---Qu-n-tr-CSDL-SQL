@@ -1,0 +1,132 @@
+﻿CREATE DATABASE LAP7_TEST
+GO
+USE LAP7_TEST
+GO
+
+CREATE TABLE KHACHHANG(
+MAKH NVARCHAR(10) NOT NULL,
+TENKH NVARCHAR(60),
+TAIKHOAN NVARCHAR(30)
+CONSTRAINT KC2 PRIMARY KEY (MAKH)
+)
+GO
+CREATE TABLE DATHANG
+(
+MADATHANG NVARCHAR(10) NOT NULL,
+MAKH NVARCHAR(10),
+MASACH NVARCHAR(10),
+SOLUONG INT,
+DONGIA MONEY,
+THANHTIEN MONEY
+CONSTRAINT KC1 PRIMARY KEY (MADATHANG),
+CONSTRAINT FK1 FOREIGN KEY (MAKH) REFERENCES KHACHHANG(MAKH)
+)
+
+--2. Xây dựng thủ tục Stored Procedure (SP) với các tham số đầu vào phù hợp thêm thông
+--tin vào các bảng trên. (3 điểm)
+--- Yêu cầu mỗi SP phải kiểm tra tham số đầu vào. Với các cột không chấp nhận thuộc tính
+--Null.
+--- Với mỗi SP viết 2 lời gọi thành công
+IF OBJECT_ID('B2') IS NOT NULL
+DROP PROC B2
+GO 
+
+CREATE PROC BAI2(
+	@MADATHANG NVARCHAR(10),
+	@MAKH NVARCHAR(10),
+	@MASACH NVARCHAR(10),
+	@SOLUONG INT,
+	@DONGIA FLOAT,
+	@THANHTIEN FLOAT
+)
+AS
+    IF @MADATHANG IS  NULL OR  @MAKH IS NULL
+				PRINT N'DỮ LIỆU KHÔNG ĐƯỢC ĐỂ NULL'
+	ELSE
+		INSERT INTO DATHANG VALUES(@MADATHANG,@MAKH,@MASACH,@SOLUONG,@DONGIA,(@SOLUONG*@DONGIA))
+EXEC BAI2 N'01','001',N'MS1',2,2000,2000
+EXEC BAI2 N'02','002',N'MS2',1,5000,NULL
+EXEC BAI2 N'03','001',N'MS3',1,5000,3333
+EXEC BAI2 N'06','002',N'MS4',1,5000,5555
+EXEC BAI2 N'07','002',N'MS4',2,5000,NULL
+----------------------------
+IF OBJECT_ID('B2B') IS NOT NULL
+DROP PROC B2B
+GO 
+CREATE PROC B2B (
+		@MAKH VARCHAR(10),
+		@TENKH NVARCHAR(50),
+		@TAIKHOAN NVARCHAR(50))
+AS
+IF @MAKH IS  NULL OR  @TENKH IS NULL OR @TAIKHOAN IS NULL
+	PRINT N'DỮ LIỆU KHÔNG ĐƯỢC ĐỂ NULL'
+	ELSE
+		INSERT INTO KHACHHANG VALUES(@MAKH,@TENKH,@TAIKHOAN)
+--
+EXEC B2B '001','TRẦN VĂN THÀNH','1900100'
+EXEC B2B '002','PHẠM PHẠM','0091398'
+EXEC B2B '003','TRẦN VĂN T','1900100'
+EXEC B2B '002','PHẠM PHẠM',NULL
+--3. Xây dựng hàm có đầu vào là MaKH, hàm trả về toàn bộ thông tin về khách của
+--MaKH truyền vào: MaKH, TenKH, TaiKhoan, soluong, dongia,
+--thanhtien (2.5 điểm)
+--- Viết lời gọi hàm.
+IF OBJECT_ID ('B3') IS NOT NULL
+DROP FUNCTION B3
+GO
+
+CREATE FUNCTION B3 (@MAKH NVARCHAR(10))
+	RETURNS TABLE 
+AS
+		RETURN (SELECT K.MaKH, TenKH, TaiKhoan, soluong, dongia,
+		thanhtien FROM KHACHHANG K JOIN DATHANG D ON K.MAKH=D.MAKH WHERE K.MAKH=@MAKH)
+
+SELECT*FROM B3(N'001')
+
+
+--4. Viết một SP nhận một tham số đầu vào là đơn giá, SP này thực hiện thao tác xóa
+--thông tin dathang và khachhang tương ứng nếu dongia lớn hơn giá trị tham số
+--dongia đầu vào.
+--Yêu cầu: Sử dụng giao dịch trong thân SP, để đảm bảo tính toàn vẹn dữ liệu khi một
+--thao tác xóa thực hiện không thành công. (2.5 điểm)
+--- Viết lời gọi SP thành công.
+ALTER PROC B4 @DONGIA FLOAT
+AS
+BEGIN TRY
+		DECLARE @Tam TABLE (MA VARCHAR(10))
+		INSERT INTO @Tam
+		SELECT MaKH FROM DATHANG WHERE DONGIA>@DONGIA
+
+		BEGIN TRAN
+		--XÓA KHÓA NGOẠI--
+		DELETE DATHANG
+		WHERE MaKH IN (SELECT * FROM @Tam)
+		--- XÓA KHÓA CHÍNH ---
+		DELETE KhachHang
+		WHERE MaKH IN (SELECT * FROM @Tam)
+		COMMIT TRAN
+END TRY
+BEGIN CATCH
+			ROLLBACK TRAN
+END CATCH
+--
+EXEC B4 4000
+SELECT * FROM DATHANG
+SELECT * FROM KHACHHANG
+
+
+
+
+--5. Tạo view Lưu thông tin Top 3 khách hàng mua hàng với số tiền nhiều nhất:
+--makh,tenkh, tổng tiền (1 điểm)
+CREATE VIEW BAI5  
+AS 
+	SELECT TOP 3 D.MAKH,TENKH,(SOLUONG*DONGIA) AS TONG FROM DATHANG D JOIN KHACHHANG K ON D.MAKH=K.MAKH
+	ORDER BY (SOLUONG*DONGIA) DESC
+
+	SELECT * FROM BAI5
+----------------------
+SELECT * FROM KHACHHANG
+SELECT * FROM DATHANG
+
+

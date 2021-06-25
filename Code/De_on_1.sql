@@ -1,0 +1,54 @@
+﻿--Đề 1
+DROP DATABASE DE_ON_1;
+CREATE DATABASE DE_ON_1
+DROP TABLE SinhVien;
+CREATE TABLE SinhVien(
+	MaSV VARCHAR(10) PRIMARY KEY,
+	HoTen NVARCHAR(50),
+	NgaySinh DATE,
+	GioiTinh NVARCHAR(10),
+);
+DROP TABLE MonHoc;
+CREATE TABLE MonHoc(
+	MaMH VARCHAR(10) PRIMARY KEY,
+	TenMonHoc NVARCHAR(50),
+	SoTinChi INT,
+);
+DROP TABLE Diem;
+CREATE TABLE Diem(
+	MaSV VARCHAR(10),
+	MaMH VARCHAR(10),
+	DiemThi FLOAT,
+	CONSTRAINT FK_1 FOREIGN KEY (MaSV) REFERENCES SinhVien(MaSV),
+	CONSTRAINT FK_2 FOREIGN KEY (MaMH) REFERENCES MonHoc(MaMH)
+);
+INSERT INTO SinhVien
+VALUES('DL001',N'Trần Văn Thành','19891112',N'Nam'),
+	('LT001',N'Nguyễn Thanh Hoa','19880102',N'Nam');
+
+INSERT INTO MonHoc
+VALUES('SQL',N'Cơ sở dữ liệu SQL Server','3'),
+	('XML',N'Ngôn Ngữ Đánh Giấu Mở Rộng','4');
+
+INSERT INTO Diem
+VALUES('DL001','SQL','8'),
+	('DL001','XML','7'),
+	('LT001','SQL','4');
+
+SELECT MaSV,NgaySinh,HoTen,GioiTinh,DATEDIFF(YEAR,NgaySinh,'20210703') AS N'Tuổi'
+FROM SinhVien;
+
+SELECT Diem.MaSV,HoTen,MaMH
+FROM Diem
+JOIN SinhVien ON Diem.MaSV = SinhVien.MaSV
+WHERE Diem.DiemThi >=5;
+
+SELECT SinhVien.MaSV,HoTen,SUM(DiemThi*SoTinChi)/SUM(SoTinChi) AS N'ĐTB'
+FROM Diem
+JOIN SinhVien ON Diem.MaSV = SinhVien.MaSV
+JOIN MonHoc ON Diem.MaMH = MonHoc.MaMH
+GROUP BY SinhVien.MaSV,HoTen;
+
+SELECT MaSV,HoTen,DATEDIFF(YEAR,NgaySinh,'20210703') AS N'Tuổi'
+FROM SinhVien
+WHERE DATEDIFF(YEAR,NgaySinh,'20210703') > 19;
